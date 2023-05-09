@@ -1,0 +1,42 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kustomize-cli
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: Openshift
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: cli
+    tekton.dev/displayName: "kustomize cli"
+    tekton.dev/platforms: "linux/amd64"
+spec:
+  workspaces:
+    - name: manifest-dir
+      optional: true
+      description: >-
+        The workspace which contains kubernetes manifests which we want to apply on the cluster.
+  description: >-
+    This task runs commands against the manifest directory. 
+    
+    It uses quay.io/wpernath/kustomize-ubi. This contains kustomize, yq, jq, wget, curl, httpie, and kubectl.
+  params:
+    - name: SCRIPT
+      description: The OpenShift CLI arguments to run
+      type: string
+      default: "kustomize help"
+    - name: VERSION
+      description: The image version to use
+      type: string
+      default: "latest"
+  steps:
+    - name: kustomize
+      image: quay.io/wpernath/kustomize-ubi:$(params.VERSION)
+      script: |
+        #!/usr/bin/env bash
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        $(params.SCRIPT)
