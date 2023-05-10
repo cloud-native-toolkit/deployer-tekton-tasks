@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: test-sm-get
+spec:
+  pipelineSpec:
+    tasks:
+    - name: get-ibm-entitlement-key
+      params:
+        - name: KEY_ID
+          value: 968d7819-f2c5-7b67-c420-3c6bfd51521e
+        - name: SECRETS_MANAGER_ENDPOINT_URL
+          value: >-
+            https://<instance-id>.us-south.secrets-manager.appdomain.cloud
+      taskRef:
+        kind: Task
+        name: ibmcloud-secrets-manager-get
+    - name: show-result
+      params:
+        - name: SCRIPT
+          value: echo $(tasks.get-ibm-entitlement-key.results.secret-value)
+        - name: VERSION
+          value: latest
+      runAfter:
+        - get-ibm-entitlement-key
+      taskRef:
+        kind: ClusterTask
+        name: openshift-client
+  serviceAccountName: pipeline
+  timeout: 1h0m0s
