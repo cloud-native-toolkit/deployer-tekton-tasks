@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: deployer-tekton-tasks
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  description: This is a library of Tekton tasks that are used in IBM TechZone deployer to accelerate the writing of Tekton pipelines.
+  title: Deployer Tekton tasks
+spec:
+  type: library
+  lifecycle: experimental
