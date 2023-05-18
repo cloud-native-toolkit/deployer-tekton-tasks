@@ -6,7 +6,18 @@ metadata:
     github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
   description: This is a library of Tekton tasks that are used in IBM TechZone deployer to accelerate the writing of Tekton pipelines.
   title: Deployer Tekton tasks
+  namespace: ibm-technology-zone
 spec:
   type: library
   lifecycle: experimental
-  owner: group:ibm/ibm-technology-zone
+  owner: ibm/ibm-technology-zone
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: deployer-tekton-tasks
+  namespace: ibm-technology-zone
+spec:
+  owner: ibm/ibm-technology-zone
+  targets:
+    - ./tasks/**/*/catalog-info.yaml
