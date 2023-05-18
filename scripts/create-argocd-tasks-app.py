@@ -51,3 +51,36 @@ for path in Path('tasks').rglob('*.yaml'):
     })
   
 print(yaml.safe_dump(tasks_app))
+
+# Example response
+#
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   annotations:
+#     argocd.argoproj.io/sync-wave: '10'
+#   labels:
+#     app.kubernetes.io/instance: bootstrap
+#   name: tasks
+#   namespace: openshift-gitops
+# spec:
+#   destination:
+#     namespace: default
+#     server: https://kubernetes.default.svc
+#   project: default
+#   sources:
+#   - path: /Users/cong/Dev/skol/deployer-tekton-tasks/tasks/ibm-pak/0.1
+#     repoURL: https://github.com/cloud-native-toolkit/deployer-tekton-tasks.git
+#     targetRevision: main
+#   - path: /Users/cong/Dev/skol/deployer-tekton-tasks/tasks/ibmcloud-secrets-manager-get/0.1
+#     repoURL: https://github.com/cloud-native-toolkit/deployer-tekton-tasks.git
+#     targetRevision: main
+#   - path: /Users/cong/Dev/skol/deployer-tekton-tasks/tasks/kustomize-cli/0.1
+#     repoURL: https://github.com/cloud-native-toolkit/deployer-tekton-tasks.git
+#     targetRevision: main
+#   syncPolicy:
+#     automated:
+#       prune: true
+#       selfHeal: true
+#     syncOptions:
+#     - CreateNamespace=true
