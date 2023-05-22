@@ -7,7 +7,7 @@ spec:
   project: default
   destination:
     server: https://kubernetes.default.svc
-    namespace: default-test
+    namespace: default
   source:
     directory:
       recurse: true
