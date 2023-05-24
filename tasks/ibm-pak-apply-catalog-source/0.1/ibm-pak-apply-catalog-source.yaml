@@ -1,0 +1,111 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/displayName: ibm-pak apply catalog source
+    tekton.dev/pipelines.minVersion: 0.17.0
+    tekton.dev/tags: cli
+  name: ibm-pak-apply-catalog-source
+  labels:
+    app.kubernetes.io/version: '0.1'
+    operator.tekton.dev/operand-name: openshift-pipelines-addons
+    operator.tekton.dev/provider-type: redhat
+spec:
+  description: >-
+    This task applies a CASE's catalog source using its CASE name, version and optionally, architecture into a cluster,
+    and wait for those catalog sources to be ready.
+  params:
+    - default: oc ibm-pak help
+      description: Optional extra scripts
+      name: SCRIPT
+      type: string
+    - name: CASE_NAME
+      description: IBM CASE name, from https://github.com/IBM/cloud-pak/tree/master/repo/case
+      type: string
+    - name: CASE_VERSION
+      description: IBM CASE version, from https://github.com/IBM/cloud-pak/tree/master/repo/case
+      type: string
+    - name: ARCHITECTURE
+      description: Optional, specific architecture for intended operator (amd64, ppc64le, s390x). This may not be required if the product supports all architectures. Check with the relevant product documentation.
+      type: string
+      default: ""
+  steps:
+    - env:
+        - name: HOME
+          value: /tekton/home
+        - name: CASE_NAME
+          value: $(params.CASE_NAME)
+        - name: CASE_VERSION
+          value: $(params.CASE_VERSION)
+        - name: ARCHITECTURE
+          value: $(params.ARCHITECTURE)
+      image: >-
+        quay.io/congxdev/ibm-pak-ubi:latest
+      name: oc
+      resources: {}
+      script: |
+        #!/usr/bin/env bash
+
+        mkdir ~/tmp-catalogsources
+        cd ~/tmp-catalogsources
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig
+
+        oc ibm-pak get ${CASE_NAME} --version ${CASE_VERSION}
+
+        oc ibm-pak generate mirror-manifests ${CASE_NAME} icr.io --version ${CASE_VERSION}
+
+        echo "===== Available catalog sources ====="
+        ls -A1 ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION} | grep catalog-sources
+
+        # if a specific catalog source for the architecture exists, apply that
+        if [ ! -z "$ARCHITECTURE" ]
+        then
+          echo "Finding specific catalog source for the chosen architecture ($ARCHITECTURE)"
+          if ! cat ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources-linux-${ARCH}.yaml; then
+            echo "Unable to find catalog source for specific architecture"
+            exit 1
+          else
+            cat ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources.yaml | yq '.metadata.name' | awk '!/---/' > catalog_sources_names.txt
+            oc apply -f ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources-linux-${ARCH}.yaml
+          fi
+        else
+          echo "No architecture chosen. Applying all available catalog sources"
+          cat ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources* | yq '.metadata.name' | awk '!/---/' > catalog_sources_names.txt
+          oc apply -f ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources*
+        fi
+
+        names=`cat catalog_sources_names.txt`
+        echo "===== Catalog sources applied to cluster ====="
+        echo $names
+
+        echo "===== Waiting for catalog sources to be READY ====="
+        for name in $names; do
+          echo "Waiting for $name to be READY"
+          until [[ $(oc get CatalogSource $name -n openshift-marketplace -o json | jq '.status.connectionState.lastObservedState') == "\"READY\"" ]]
+          do
+            sleep 2
+          done
+          echo "CatalogSource $name is READY"
+        done
+
+        $(params.SCRIPT)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  workspaces:
+    - description: >-
+        The workspace which contains kubernetes manifests which we want to apply
+        on the cluster.
+      name: manifest-dir
+      optional: true
+    - description: >-
+        The workspace which contains the the kubeconfig file if in case we want
+        to run the oc command on another cluster.
+      name: kubeconfig-dir
+      optional: true

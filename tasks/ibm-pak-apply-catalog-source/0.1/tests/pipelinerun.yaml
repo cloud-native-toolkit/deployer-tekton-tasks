@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: test-ibm-pak-catalog-source
+spec:
+  pipelineSpec:
+    tasks:
+    - name: ibm-pak-apply-catalog-source
+      params:
+        - name: SCRIPT
+          value: ''
+        - name: CASE_NAME
+          value: ibm-mq
+        - name: CASE_VERSION
+          value: 2.3.2
+        - name: ARCHITECTURE
+          value: amd64
+      taskRef:
+        kind: Task
+        name: ibm-pak-apply-catalog-source
+  serviceAccountName: pipeline
+  timeout: 1h0m0s
