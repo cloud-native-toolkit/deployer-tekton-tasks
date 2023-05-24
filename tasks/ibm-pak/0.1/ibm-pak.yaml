@@ -9,7 +9,6 @@ metadata:
   labels:
     app.kubernetes.io/version: '0.1'
     operator.tekton.dev/operand-name: openshift-pipelines-addons
-    operator.tekton.dev/provider-type: redhat
 spec:
   description: >-
     This task runs commands against the cluster provided by user and if not
