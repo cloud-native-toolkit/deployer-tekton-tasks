@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: apply-olm-subscription-v0.1
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.1'
+  description: Apply OLM subscription and wait for that subscription to be ready
+  title: Apply OLM Subscription
+  namespace: ibm-technology-zone
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: ibm/ibm-technology-zone
+  subcomponentOf: ibm-technology-zone/deployer-tekton-tasks

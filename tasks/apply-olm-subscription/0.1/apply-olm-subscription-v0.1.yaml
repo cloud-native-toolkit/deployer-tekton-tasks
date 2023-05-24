@@ -1,0 +1,129 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/displayName: Apply OLM Subscription
+    tekton.dev/pipelines.minVersion: 0.17.0
+    tekton.dev/tags: cli
+  name: apply-olm-subscription-v0.1
+  labels:
+    app.kubernetes.io/version: '0.1'
+    operator.tekton.dev/operand-name: openshift-pipelines-addons
+spec:
+  description: >-
+    This task applies a CASE's catalog source using its CASE name, version and optionally, architecture into a cluster,
+    and wait for those catalog sources to be ready.
+  params:
+    - name: SUBSCRIPTION
+      description: OLM Subscription YAML
+      type: string
+      default: |
+        apiVersion: operators.coreos.com/v1alpha1
+        kind: Subscription
+        metadata:
+          name: subscription-name
+          namespace: openshift-operators
+        spec:
+          channel: channel
+          name: subscription-name
+          source: catalog-source-name
+          sourceNamespace: openshift-marketplace
+    - default: ""
+      description: Optional extra scripts
+      name: SCRIPT
+      type: string
+  steps:
+    - env:
+        - name: HOME
+          value: /tekton/home
+      image: >-
+        quay.io/congxdev/ibm-pak-ubi:latest
+      name: oc
+      resources: {}
+      script: |
+        #!/usr/bin/env bash
+
+        mkdir ~/tmp
+        cd ~/tmp
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig
+
+        function get_csv
+        {
+          name=$1
+          namespace=$2
+          csv=$(oc get subscriptions.operators.coreos.com $name -n $namespace -o yaml | yq '.status.currentCSV')
+          echo $csv
+        }
+        shopt -s expand_aliases
+
+        echo "===== Applying the following subscription ====="
+        printf '%s' "$(params.SUBSCRIPTION)" > "./subscription.yaml"
+        chmod 0755 ./subscription.yaml
+        cat ./subscription.yaml
+
+        subscription_name=$(cat subscription.yaml | yq '.metadata.name')
+        subscription_namespace=$(cat subscription.yaml | yq '.metadata.namespace')
+        echo "Subscription name: $subscription_name"
+        echo "Subscription namespace: $subscription_namespace"
+
+        echo "===== Removing $subscription_name in $subscription_namespace if exists ====="
+        echo "Checking for existing ClusterServiceVersion"
+        csv=$(get_csv $subscription_name $subscription_namespace)
+        echo "CSV: $csv"
+        
+        if [ $csv == "null" ]; then
+          echo "ClusterServiceVersion not found. Maybe the subscription is being created. Deleting that subscription."
+          oc -n $subscription_namespace delete subscriptions.operators.coreos.com $subscription_name --ignore-not-found=true
+        else
+          echo "Deleting clusterserviceversion and subscription..."
+          oc -n $subscription_namespace delete clusterserviceversions.operators.coreos.com $csv --ignore-not-found=true
+          oc -n $subscription_namespace delete subscriptions.operators.coreos.com $subscription_name --ignore-not-found=true
+        fi
+
+        echo "===== Installing $subscription_name in $subscription_namespace ====="
+        oc apply -f subscription.yaml
+        while true
+        do
+          echo "Waiting for a cluster service version (CSV) for $subscription_name to be created... (wait 10s inbetween checks)"
+          csv=$(get_csv $subscription_name $subscription_namespace)
+          echo "CSV: $csv"
+          if [ $csv != "null" ]; then
+            break
+          fi
+          sleep 10
+        done
+
+        csv=$(get_csv $subscription_name $subscription_namespace)
+        while true
+        do
+          csv_phase=$(oc get -n $subscription_namespace clusterserviceversions.operators.coreos.com $csv -o yaml | yq '.status.phase')
+          if [[ $csv_phase != "Succeeded" ]]; then
+            echo "Waiting for csv $csv to be Successful. Current phase: $csv_phase... (wait 10s inbetween checks)"
+          else
+            break
+          fi
+          sleep 10
+        done
+        echo "CSV installed. Subscription installed."
+
+        $(params.SCRIPT)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  workspaces:
+    - description: >-
+        The workspace which contains kubernetes manifests which we want to apply
+        on the cluster.
+      name: manifest-dir
+      optional: true
+    - description: >-
+        The workspace which contains the the kubeconfig file if in case we want
+        to run the oc command on another cluster.
+      name: kubeconfig-dir
+      optional: true
