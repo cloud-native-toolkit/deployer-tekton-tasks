@@ -60,7 +60,8 @@ spec:
         oc ibm-pak generate mirror-manifests ${CASE_NAME} icr.io --version ${CASE_VERSION}
 
         echo "===== Available catalog sources ====="
-        ls -A1 ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION} | grep catalog-sources
+        ls -A1 ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION} | grep catalog-sources > catalog-sources-files.txt
+        cat catalog-sources-files.txt
 
         # if a specific catalog source for the architecture exists, apply that
         if [ ! -z "$ARCHITECTURE" ]
@@ -76,7 +77,10 @@ spec:
         else
           echo "No architecture chosen. Applying all available catalog sources"
           cat ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources* | yq '.metadata.name' | awk '!/---/' > catalog_sources_names.txt
-          oc apply -f ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources*
+          file_names=`cat catalog-sources-files.txt`
+          for file_name in $file_names; do
+            oc apply -f ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/$file_name
+          done
         fi
 
         names=`cat catalog_sources_names.txt`
