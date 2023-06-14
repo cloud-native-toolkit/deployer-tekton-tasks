@@ -44,6 +44,9 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+  results:
+    - name: output
+      description: The output of the task
   workspaces:
     - description: >-
         The workspace which contains kubernetes manifests which we want to apply
