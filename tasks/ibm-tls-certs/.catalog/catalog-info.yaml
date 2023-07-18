@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ibm-tls-certs
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.1'
+  description: Installs the tls certs from common services to the cp console
+  title: IBM Cloud Pak cert install
+  namespace: ibm-technology-zone
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: ibm/ibm-technology-zone
+  subcomponentOf: ibm-technology-zone/deployer-tekton-tasks

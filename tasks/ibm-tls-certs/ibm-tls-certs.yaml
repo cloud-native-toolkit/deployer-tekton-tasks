@@ -1,0 +1,196 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: ibm-tls-certs
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: IBM Cloud
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: cli
+    tekton.dev/displayName: "IBM Cloud Pak TLS certs install"
+    tekton.dev/platforms: "linux/amd64"
+spec:
+  description: >-
+    This task handles installing the tls certs from common-services to the cp console
+  params:
+    - name: namespace
+      type: string
+      default: "default"
+  steps:
+    - name: install-certs-key
+      image: quay.io/openshift/origin-cli:4.10
+      script: |
+        mkdir ~/hostname_update
+
+        cd ~/hostname_update
+
+
+        echo "Creating script to update certificates for common-services"
+
+        cat <<EOF > hostname_update.sh
+
+        echo "Checking all the pre-reqs"
+
+
+        echo "Checking for an authenticated oc CLI..."
+
+        TOKENS=$(oc whoami >/dev/null 2>&1)
+
+        if [ $? -eq 1 ]
+
+        then
+          echo "You must be logged in with oc first"
+          exit 1
+        else
+          echo "Authenticated oc CLI found"
+        fi
+
+
+        echo "Checking for tls.crt..."
+
+        if [ ! -f "./tls.crt" ]
+
+        then
+          echo "No tls.crt found"
+          echo "Please put the TLS certificate in tls.crt in the current directory"
+          exit 1
+        else
+          echo "Found tls.crt"
+        fi
+
+
+        echo "Checking for tls.key..."
+
+        if [ ! -f "./tls.key" ]
+
+        then
+          echo "No tls.key found"
+          echo "Please put the TLS key in tls.key in the current directory"
+          exit 1
+        else
+          echo "Found tls.key"
+        fi
+
+
+        echo "Checking for ca.crt..."
+
+        if [ ! -f "./ca.crt" ]
+
+        then
+          echo "No ca.crt found"
+          echo "Please put the CA public certificate in ca.crt in the current directory"
+          exit 1
+        else
+          echo "Found ca.crt"
+        fi
+
+
+        echo "Updating the foundational services route"
+
+
+        echo "Taking ownership of the certificate from foundational services"
+
+        oc -n ibm-common-services patch managementingress default --type merge --patch '{"spec":{"ignoreRouteCert":true}}'
+
+
+        echo "Updating certificate..."
+
+        oc -n ibm-common-services delete certificates.certmanager.k8s.io route-cert
+
+        oc -n ibm-common-services delete secret route-tls-secret
+
+        oc -n ibm-common-services create secret generic route-tls-secret --from-file=ca.crt=ca.crt  --from-file=tls.crt=tls.crt  --from-file=tls.key=tls.key
+
+
+        echo "Deleting ibmcloud-cluster-ca-cert to trigger a certificate refresh..."
+
+        oc delete secret ibmcloud-cluster-ca-cert -n ibm-common-services
+
+
+        echo "Restarting the auth-idp pods..."
+
+        oc -n ibm-common-services delete pod -l app=auth-idp
+
+
+        echo "Deleting the management-ingress-ibmcloud-cluster-ca-cert
+        secret..."
+
+        oc -n $(params.namespace) delete secret management-ingress-ibmcloud-cluster-ca-cert
+
+
+        echo "Creating operand request file to apply"
+
+
+        echo "apiVersion: operator.ibm.com/v1alpha1
+
+        kind: OperandRequest
+
+        metadata:
+          name: register-new-ca-cert
+          namespace: $(params.namespace)
+        spec:
+          requests:
+            - operands:
+                - name: ibm-management-ingress-operator
+              registry: common-service
+              registryNamespace: ibm-common-services" > operand_request.yaml
+
+        echo "Creating a new operand request that will trigger the recreation of the management-ingress secret..."
+
+        oc apply -f operand_request.yaml
+
+
+        echo "Wait for the operand request to be ready..."
+
+        oc wait --for condition=ready --timeout=120s operandrequest -n $(params.namespace) register-new-ca-cert
+
+
+        echo "Waiting for up to 30 minutes for the auth-idp pods to restart..."
+
+        oc wait --for condition=ready --timeout=900s pod -l app=auth-idp -n ibm-common-services
+
+
+        echo "Deleting the operand request now secret is up..."
+
+        oc delete operandrequest -n $(params.namespace) register-new-ca-cert
+
+
+        echo "Setup complete"
+
+        EOF
+
+
+        chmod +x hostname_update.sh
+
+
+        echo "Extracting cluster's TLS certs"
+
+        pwd
+
+
+        oc extract secret/$(oc get ingresscontroller.operator default -n openshift-ingress-operator -o jsonpath='{.spec.defaultCertificate.name}') -n openshift-ingress --to=. --keys=tls.crt,tls.key --confirm
+
+
+        csplit -s -z -f cert- tls.crt '/-----BEGIN CERTIFICATE-----/'  '{*}'
+
+
+        ls -ltr
+
+
+        mv tls.crt tls.crt.original
+
+        mv cert-00 tls.crt
+
+        cat cert-01 cert-02 > ca.crt
+
+
+        echo "Updating common services' certs"
+
+        ./hostname_update.sh
+
+
+        oc -n $(params.namespace) delete secret custom-tls-secret --ignore-not-found=true
+
+        oc create secret generic custom-tls-secret --from-file=ca.crt=./ca.crt --from-file=tls.crt=./tls.crt --from-file=tls.key=./tls.key -n $(params.namespace)
