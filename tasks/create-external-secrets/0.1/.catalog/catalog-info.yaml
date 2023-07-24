@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: create-external-secrets-v0.1
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.1'
+  description: >-
+    `create-external-secret` creates an ExternalSecrets in a provided NAMESPACE given a KEY_ID. This task assumes that a ClusterSecretStore is already created.
+  title: Create an external secret
+  namespace: ibm-technology-zone
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: ibm/ibm-technology-zone
+  subcomponentOf: ibm-technology-zone/deployer-tekton-tasks

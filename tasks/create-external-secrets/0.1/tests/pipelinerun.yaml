@@ -1,0 +1,10 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: create-secrets-
+  namespace: default
+spec:
+  pipelineRef:
+    name: create-secrets
+  serviceAccountName: pipeline
+  timeout: 1h0m0s

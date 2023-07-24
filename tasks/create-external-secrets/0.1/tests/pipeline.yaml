@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: create-secrets
+  namespace: default
+spec:
+  tasks:
+    - name: create-external-secret
+      params:
+        - name: SCRIPT
+          value: oc help
+        - name: CLUSTER_SECRET_STORE_NAME
+          value: cluster
+        - name: TARGET_SECRET_NAME
+          value: hush
+        - name: TARGET_SECRET_NAMESPACE
+          value: default
+        - name: SECRET_DATA
+          value: |-
+            - key: azure_base_domain
+              id: 015b85fd-67cb-f70c-fa40-20b9b9d3b510
+            - key: github_token
+              id: 428d3556-2701-18d3-5cfe-6eb9d5a66530
+      taskRef:
+        kind: Task
+        name: create-external-secret
