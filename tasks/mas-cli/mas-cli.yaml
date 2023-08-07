@@ -1,0 +1,54 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/displayName: Maximo CLI
+    tekton.dev/pipelines.minVersion: 0.17.0
+    tekton.dev/tags: cli
+  name: mas-cli
+  labels:
+    app.kubernetes.io/version: '0.1'
+    operator.tekton.dev/operand-name: openshift-pipelines-addons
+spec:
+  description: >-
+    This task loads the mascli container quay.io/ibmmas/cli and runs scripts in it
+
+    MAS cli is the cli written for the Maximo Application Suite
+    https://github.com/ibm-mas/cli
+  params:
+    - default: mas
+      description: The mas cli arguments to run
+      name: SCRIPT
+      type: string
+  steps:
+    - image: >-
+        quay.io/ibmmas/cli:latest
+      name: mascli
+      resources: {}
+      script: |
+        #!/usr/bin/env bash
+
+        [[ "$(workspaces.license-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig
+
+        $(params.SCRIPT)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  results:
+    - name: output
+      description: The output of the task
+  workspaces:
+    - description: >-
+        The workspace which contains the maximo license file.
+      name: license-dir
+      optional: true
+    - description: >-
+        The workspace which contains the the kubeconfig file if in case we want
+        to run the mas cli command on another cluster.
+      name: kubeconfig-dir
+      optional: true
