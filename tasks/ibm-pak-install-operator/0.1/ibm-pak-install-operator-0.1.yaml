@@ -76,7 +76,7 @@ spec:
         tar -xzf ~/.ibm-pak/data/cases/$CASE_NAME/$CASE_VERSION/$CASE_NAME-$CASE_VERSION.tgz
         export CASE_INVENTORY_SETUP=$(cat ./$CASE_NAME/digests.yaml | yq -e '.digests.digestDefs.inventory | keys' | cut -c 3-)
 
-        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-catalog --inventory $CASE_INVENTORY_SETUP --namespace $OPERATOR_NAMESPACE -r "--registry icr.io"
+        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-catalog --inventory $CASE_INVENTORY_SETUP --namespace $OPERATOR_NAMESPACE -r "--registry $REGISTRY"
         oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-operator --inventory $CASE_INVENTORY_SETUP --namespace $OPERATOR_NAMESPACE
 
         $(params.SCRIPT)
