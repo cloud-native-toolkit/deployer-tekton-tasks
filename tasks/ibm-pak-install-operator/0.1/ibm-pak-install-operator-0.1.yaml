@@ -38,6 +38,9 @@ spec:
       description: Kubernetes registry to get operators from
       type: string
       default: icr.io/
+    - name: CASE_INVENTORY
+      description: Inventory to deploy
+      type: string
   steps:
     - env:
         - name: HOME
@@ -54,6 +57,8 @@ spec:
           value: $(params.OPERATOR_NAMESPACE)
         - name: REGISTRY
           value: $(params.REGISTRY)
+        - name: INVENTORY
+          value: $(params.CASE_INVENTORY)
       image: >-
         quay.io/congxdev/ibm-pak-ubi:latest
       name: oc
@@ -73,11 +78,8 @@ spec:
         oc ibm-pak get $CASE_NAME --version $CASE_VERSION
         oc ibm-pak generate online-manifests $CASE_NAME --version $CASE_VERSION
 
-        tar -xzf ~/.ibm-pak/data/cases/$CASE_NAME/$CASE_VERSION/$CASE_NAME-$CASE_VERSION.tgz
-        export CASE_INVENTORY_SETUP=$(cat ./$CASE_NAME/digests.yaml | yq -e '.digests.digestDefs.inventory | keys' | grep -i operator | cut -c 3-)
-
-        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-catalog --inventory $CASE_INVENTORY_SETUP --namespace $OPERATOR_NAMESPACE -r "--registry $REGISTRY"
-        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-operator --inventory $CASE_INVENTORY_SETUP --namespace $OPERATOR_NAMESPACE
+        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-catalog --inventory $INVENTORY --namespace $OPERATOR_NAMESPACE -r "--registry $REGISTRY"
+        oc ibm-pak launch $CASE_NAME --version $CASE_VERSION --action install-operator --inventory $INVENTORY --namespace $OPERATOR_NAMESPACE
 
         $(params.SCRIPT)
       securityContext:
