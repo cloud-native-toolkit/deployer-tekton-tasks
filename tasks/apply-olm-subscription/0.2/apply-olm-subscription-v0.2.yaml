@@ -5,9 +5,9 @@ metadata:
     tekton.dev/displayName: Apply OLM Subscription
     tekton.dev/pipelines.minVersion: 0.17.0
     tekton.dev/tags: cli
-  name: apply-olm-subscription-v0.1
+  name: apply-olm-subscription-v0.2
   labels:
-    app.kubernetes.io/version: '0.1'
+    app.kubernetes.io/version: '0.2'
     operator.tekton.dev/operand-name: openshift-pipelines-addons
 spec:
   description: >-
