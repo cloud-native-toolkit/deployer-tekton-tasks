@@ -8,7 +8,6 @@ metadata:
   name: apply-olm-subscription-v0.2
   labels:
     app.kubernetes.io/version: '0.2'
-    operator.tekton.dev/operand-name: openshift-pipelines-addons
 spec:
   description: >-
     This task applies a CASE's catalog source using its CASE name, version and optionally, architecture into a cluster,
