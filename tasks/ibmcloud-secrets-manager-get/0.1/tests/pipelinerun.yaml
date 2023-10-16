@@ -24,7 +24,7 @@ spec:
       runAfter:
         - get-ibm-entitlement-key
       taskRef:
-        kind: ClusterTask
-        name: openshift-client
+        kind: Task
+        name: ibm-pak
   serviceAccountName: pipeline
   timeout: 1h0m0s
