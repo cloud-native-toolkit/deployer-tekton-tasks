@@ -1,0 +1,60 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/displayName: ibm-pak-0.2
+    tekton.dev/pipelines.minVersion: 0.17.0
+    tekton.dev/tags: cli
+  name: ibm-pak-0.2
+  labels:
+    app.kubernetes.io/version: '0.2'
+    operator.tekton.dev/operand-name: openshift-pipelines-addons
+spec:
+  description: >-
+    This task runs commands against the cluster provided by user and if not
+    provided then where the Task is being executed.
+
+    `ibm-pak` provides the IBM Catalog Management plug-in for IBM Cloud Paks.
+    The plugin streamlines the deployment of IBM Cloud Paks in a disconnected
+    environment, which was done earlier using cloudctl.
+  params:
+    - default: oc ibm-pak help
+      description: The OpenShift CLI arguments to run
+      name: SCRIPT
+      type: string
+  steps:
+    - env:
+        - name: HOME
+          value: /tekton/home
+      image: >-
+        quay.io/ibmtz/ibm-pak-ubi:latest
+      name: oc
+      resources: {}
+      script: |
+        #!/usr/bin/env bash
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig
+
+        $(params.SCRIPT)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  results:
+    - name: output
+      description: The output of the task
+  workspaces:
+    - description: >-
+        The workspace which contains kubernetes manifests which we want to apply
+        on the cluster.
+      name: manifest-dir
+      optional: true
+    - description: >-
+        The workspace which contains the the kubeconfig file if in case we want
+        to run the oc command on another cluster.
+      name: kubeconfig-dir
+      optional: true
