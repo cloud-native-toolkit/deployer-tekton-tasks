@@ -1,0 +1,62 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/displayName: ibm-lakehouse-manage
+    tekton.dev/pipelines.minVersion: 0.1.0
+    tekton.dev/tags: cli
+    argocd.argoproj.io/sync-wave: '10'
+  name: ibm-lakehouse-manage
+  labels:
+    app.kubernetes.io/version: '0.2'
+spec:
+  description: >-
+    This task runs the ibm-lakehouse-manage-utils image to directly access the commands
+  params:
+    - description: Latest GA build tag for ibm-lakehouse-manage-utils
+      name: IMAGE_TAG
+      type: string
+      default: v1.0.3
+    - description: Script to run
+      name: SCRIPT
+      type: string
+      default: oc help
+  steps:
+    - env:
+        - name: HOME
+          value: /tekton/home
+      image: >-
+        cp.icr.io/cpopen/watsonx-data/ibm-lakehouse-manage-utils:$(params.IMAGE_TAG)
+      name: ibm-lakehouse-manage
+      resources: {}
+      args: ["/usr/local/bin/entrypoint"]
+      script: |
+        #!/usr/bin/env bash
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig && \
+        cp $(workspaces.kubeconfig-dir.path)/kubeconfig /opt/ansible/.kubeconfig
+
+        unset KUBECONFIG
+
+        $(params.SCRIPT)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  results:
+    - name: output
+      description: The output of the task
+  workspaces:
+    - description: >-
+        The workspace which contains kubernetes manifests which we want to apply
+        on the cluster.
+      name: manifest-dir
+    - description: >-
+        The workspace which contains the the kubeconfig file if in case we want
+        to run the oc command on another cluster.
+      name: kubeconfig-dir
+      optional: true

@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ibm-lakehouse-manage-v0.1
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.1'
+  description: IBM Lakehouse Manage
+  title: ibm-lakehouse-manage-0.1
+  namespace: ibm-technology-zone
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: ibm-technology-zone
+  subcomponentOf: deployer-tekton-tasks
