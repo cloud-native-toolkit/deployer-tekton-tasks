@@ -183,7 +183,7 @@ spec:
 
         mv cert-00 tls.crt
 
-        cat cert-01 cert-02 > ca.crt
+        cat cert-01 > ca.crt
 
 
         echo "Updating common services' certs"
