@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  labels:
+    app.kubernetes.io/version: '0.1'
+  name: python-3.11
+spec:
+  description: UBI 9 Python 3.11 task
+  params:
+    - description: Python script to run
+      name: SCRIPT
+      type: string
+  results:
+    - description: The output of the task
+      name: output
+      type: string
+  steps:
+    - computeResources: {}
+      env:
+        - name: HOME
+          value: /tekton/home
+      image: 'registry.access.redhat.com/ubi9/python-311:latest'
+      name: script
+      script: |
+        #!/usr/bin/env bash
+
+        [[ "$(workspaces.manifest-dir.bound)" == "true" ]] && \
+        cd $(workspaces.manifest-dir.path)
+
+        [[ "$(workspaces.kubeconfig-dir.bound)" == "true" ]] && \
+        [[ -f $(workspaces.kubeconfig-dir.path)/kubeconfig ]] && \
+        export KUBECONFIG=$(workspaces.kubeconfig-dir.path)/kubeconfig
+
+        python - << EOF
+        $(params.SCRIPT)
+        EOF
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+  workspaces:
+    - description: The workspace which contains kubernetes manifests which we want to apply on the cluster.
+      name: manifest-dir
+      optional: true
+    - description: The workspace which contains the the kubeconfig file if in case we want to run the oc command on another cluster.
+      name: kubeconfig-dir
+      optional: true
