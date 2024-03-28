@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: hello-python-
+spec:
+  params:
+    - name: python_script
+      value: |-
+        from enum import Enum
+
+        class Day(Enum):
+            MONDAY = 1
+            TUESDAY = 2
+            WEDNESDAY = 3
+
+        # print the enum member
+        print(Day.MONDAY)
+
+        # get the name of the enum member
+        print(Day.MONDAY.name)
+
+        # get the value of the enum member
+        print(Day.MONDAY.value)
+  pipelineSpec:
+    tasks:
+      - name: hello-python
+        params:
+          - name: SCRIPT
+            value: $(params.python_script)
+        taskRef:
+          kind: Task
+          name: python-3.11
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
