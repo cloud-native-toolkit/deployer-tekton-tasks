@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: python-3.11
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.1'
+  description: Python 3.11 Tekton task
+  title: Python 3.11 Tekton task
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: user:cong.nguyen@au1.ibm.com
+  subcomponentOf: ibm-technology-zone/deployer-tekton-tasks
