@@ -1,0 +1,82 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: ibm-pak-1.14-
+spec:
+  pipelineRef:
+    name: ibm-pak
+  serviceAccountName: pipeline
+  timeout: 1h0m0s
+  workspaces:
+    - name: ibm-pak-manifests
+      volumeClaimTemplate:
+        metadata:
+          creationTimestamp: null
+        spec:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Gi
+          storageClassName: ocs-storagecluster-cephfs
+          volumeMode: Filesystem
+        status: {}
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ibm-pak
+spec:
+  tasks:
+    - name: platform-navigator-catalog-source
+      params:
+        - name: SCRIPT
+          value: >-
+            export CASE_NAME=ibm-integration-platform-navigator
+
+            export CASE_VERSION=7.0.4
+
+            export ARCH=amd64
+
+
+            oc plugin list
+
+
+            oc ibm-pak get ${CASE_NAME} --version ${CASE_VERSION}
+
+            oc ibm-pak generate mirror-manifests ${CASE_NAME} icr.io --version
+            ${CASE_VERSION}
+
+
+            cat
+            ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources.yaml
+
+
+            oc apply -f
+            ~/.ibm-pak/data/mirror/${CASE_NAME}/${CASE_VERSION}/catalog-sources.yaml
+
+
+            export STATUS=$(oc get CatalogSource
+            ibm-integration-platform-navigator-catalog -n openshift-marketplace
+            -o json | jq '.status.connectionState.lastObservedState')
+
+            echo "Waiting for catalog source to be ready"
+
+            until [[ $STATUS == "\"READY\"" ]]
+
+            do
+                    echo $STATUS
+                    export STATUS=$(oc get CatalogSource ibm-integration-platform-navigator-catalog -n openshift-marketplace -o json | jq '.status.connectionState.lastObservedState')
+                    sleep 2
+            done
+
+            echo "Platform navigator catalog source is ready."
+      taskRef:
+        kind: Task
+        name: ibm-pak-0.3
+      workspaces:
+        - name: manifest-dir
+          workspace: ibm-pak-manifests
+  workspaces:
+    - name: ibm-pak-manifests
+      optional: false
