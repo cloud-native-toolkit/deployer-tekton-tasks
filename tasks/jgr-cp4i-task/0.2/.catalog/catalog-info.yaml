@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: jgr-task-v0.2
+  annotations:
+    github.com/project-slug: cloud-native-toolkit/deployer-tekton-tasks
+  labels:
+    techzone.ibm.com/version: '0.2'
+  description: |-
+    This task runs commands against the cluster provided by user and if not provided then where the Task is being executed.
+    `ibm-pak` provides the IBM Catalog Management plug-in for IBM Cloud Paks. The plugin streamlines the deployment of IBM Cloud Paks in a disconnected environment, which was done earlier using cloudctl.
+    This task uses the quay.io/ibmtz/ibm-pak-ubi:v1.14.0 image. This comes with oc, ibm-pak, jq, yq, git, unzip and zip
+  title: jgr-task-0.2
+spec:
+  type: tekton-task
+  lifecycle: experimental
+  owner: ibm/ibm-technology-zone
+  subcomponentOf: ibm-technology-zone/deployer-tekton-tasks
